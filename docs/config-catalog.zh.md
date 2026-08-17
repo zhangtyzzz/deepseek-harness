@@ -787,6 +787,102 @@ export interface Config {
 
 来源：[`packages/host/frontend-static/src/index.ts:28`](../packages/host/frontend-static/src/index.ts)
 
+<a id="deepseek-aidsh-host-web-auth"></a>
+
+## `@deepseek-ai/dsh-host-web-auth`
+
+```ts config-catalog
+/** Config for the authentication seam. */
+export interface WebAuthConfig {
+  /**
+   * Lifetime of a browser sign-in session. A signed-in browser is re-prompted
+   * after this long, and the record is dropped server-side at the same moment.
+   */
+  sessionTtlSeconds?: number
+  /**
+   * Whether issued cookies are marked `Secure`. A harness serves plain HTTP
+   * even when the browser reached it over HTTPS through a tunnel, so this is a
+   * deployment fact: `auto` marks `Secure` when the request reports an HTTPS
+   * forwarding hop, `always` suits a deployment reachable only over HTTPS, and
+   * `never` is required for plain-HTTP LAN serving.
+   */
+  cookieSecure?: CookieSecurePolicy
+}
+
+/**
+ * When to mark the cookie `Secure`. A harness serves plain HTTP even when the
+ * browser reached it over HTTPS through a tunnel or reverse proxy, so the
+ * correct answer is a deployment fact rather than something the process can
+ * observe from its own socket.
+ */
+export type CookieSecurePolicy =
+  /** Mark `Secure` only when the request reports an HTTPS forwarding hop. */
+  | 'auto'
+  /** Always mark `Secure`; correct whenever every route to the harness is HTTPS. */
+  | 'always'
+  /** Never mark `Secure`; required for a plain-HTTP LAN deployment. */
+  | 'never'
+```
+
+来源：[`packages/host/web-auth/src/index.ts:55`](../packages/host/web-auth/src/index.ts)
+
+<a id="deepseek-aidsh-host-web-auth-cloudflare-access"></a>
+
+## `@deepseek-ai/dsh-host-web-auth-cloudflare-access`
+
+需要：`webAuth`
+
+```ts config-catalog
+/** Plugin config. */
+export interface Config {
+  /**
+   * The Access team domain, for example `example.cloudflareaccess.com`. The
+   * expected token issuer is this domain's `https://` origin, and the signing
+   * key set is fetched from it unless {@link Config.certsUrl} overrides.
+   */
+  teamDomain: string
+  /**
+   * The Access application's Audience (AUD) tag. A token is accepted only when
+   * its `aud` contains this value, which is what stops a token minted for
+   * another application in the same team from reaching this harness.
+   */
+  audience: string
+  /**
+   * Signing key-set endpoint, when it is not the team domain's standard path.
+   * Deployments on a custom Access hostname need this, and it is the seam a
+   * test uses to serve a local key set instead of reaching Cloudflare.
+   */
+  certsUrl?: string
+}
+```
+
+来源：[`packages/host/web-auth-cloudflare-access/src/index.ts:28`](../packages/host/web-auth-cloudflare-access/src/index.ts)
+
+<a id="deepseek-aidsh-host-web-auth-password"></a>
+
+## `@deepseek-ai/dsh-host-web-auth-password`
+
+需要：`webAuth`
+
+```ts config-catalog
+/** Plugin config. */
+export interface Config {
+  /**
+   * Absolute path of the credential file holding the scrypt verifier. Where
+   * harness state lives is an assembly fact of the composing application, so
+   * the shipped bundle supplies a harness-home path and a deployment never
+   * hardcodes one.
+   */
+  file: string
+  /** Consecutive failed attempts from one client that trigger a lockout. */
+  maxAttempts?: number
+  /** How long a triggered lockout refuses further attempts from that client. */
+  lockoutSeconds?: number
+}
+```
+
+来源：[`packages/host/web-auth-password/src/index.ts:31`](../packages/host/web-auth-password/src/index.ts)
+
 <a id="deepseek-aidsh-host-webserver"></a>
 
 ## `@deepseek-ai/dsh-host-webserver`

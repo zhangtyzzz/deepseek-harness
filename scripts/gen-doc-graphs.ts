@@ -514,6 +514,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Plain node:http carrier: named-route registry, index transform taps, and the static dist fallback; web-transport plugins register their own routes.',
   },
   {
+    key: 'webAuth',
+    pkg: 'web-auth',
+    title: 'Web-access authentication',
+    mode: 'seam',
+    implementations: ['web-auth-password', 'web-auth-cloudflare-access'],
+    consumers: ['connection'],
+    note: 'Provider registry plus the sign-in session and cookie lifecycle; the carrier layers the requirement onto its browser-authority fence, so mounting no provider leaves loopback-only serving unchanged.',
+  },
+  {
     key: 'clientModules',
     pkg: 'modules',
     title: 'Client plugin graph host',

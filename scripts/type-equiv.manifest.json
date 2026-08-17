@@ -1646,6 +1646,41 @@
       "source": "packages/runtime-diagnostics/invariants/src/index.ts"
     },
     {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "WebAuthIdentity",
+      "source": "packages/host/web-auth/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "WebAuthRequest",
+      "source": "packages/host/web-auth/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "WebAuthClient",
+      "source": "packages/host/web-auth/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "WebAuthProvider",
+      "source": "packages/host/web-auth/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "WebAuthSignInOutcome",
+      "source": "packages/host/web-auth/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "WebAuthStatus",
+      "source": "packages/host/web-auth/src/index.ts"
+    },
+    {
+      "doc": "docs/subsystems/web-auth.md",
+      "symbol": "SignInResult",
+      "source": "packages/host/web-auth/src/index.ts"
+    },
+    {
       "doc": "docs/subsystems/web-server.md",
       "symbol": "WebRouteKind",
       "source": "packages/host/webserver/src/index.ts"

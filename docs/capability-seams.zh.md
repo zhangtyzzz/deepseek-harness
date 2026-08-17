@@ -182,6 +182,10 @@ flowchart LR
   pkg_connection["connection"]
   pkg_modules["modules"]
   pkg_hmr["hmr"]
+  pkg_web_auth["web-auth"]
+  svc_webAuth["ctx.webAuth<br/>Web-access authentication"]
+  pkg_web_auth_password["web-auth-password"]
+  pkg_web_auth_cloudflare_access["web-auth-cloudflare-access"]
   svc_clientModules["ctx.clientModules<br/>Client plugin graph host"]
   pkg_workflow["workflow"]
   svc_workflowEngine["ctx.workflowEngine<br/>Workflow script engine"]
@@ -288,6 +292,9 @@ flowchart LR
   pkg_typert_registry --> svc_typert
   pkg_user_questions --> svc_userQuestions
   pkg_web --> svc_web
+  pkg_web_auth --> svc_webAuth
+  pkg_web_auth_cloudflare_access --> svc_webAuth
+  pkg_web_auth_password --> svc_webAuth
   pkg_web_fetch_http --> svc_web
   pkg_web_search_deepseek --> svc_web
   pkg_web_search_exa --> svc_web
@@ -402,6 +409,7 @@ flowchart LR
   svc_typert --> pkg_typert_loader
   svc_userQuestions --> pkg_tool_ask_user
   svc_web --> pkg_tool_web
+  svc_webAuth --> pkg_connection
   svc_webServer --> pkg_connection
   svc_webServer --> pkg_hmr
   svc_webServer --> pkg_modules
@@ -463,6 +471,7 @@ flowchart LR
 | `ctx.spillStore` | `seam` | [`spill`](../packages/spill/spill) | [`spill-local`](../packages/spill/spill-local) | [`spill-policy`](../packages/spill/spill-policy) | - | 后端保存过大的工具文本，并返回面向模型的定位信息和取回提示；spill-policy 是 tools/post-execute 消费方，负责决定何时 spill。 |
 | `ctx.directoryPicker` | `seam` | `directory-picker` | `directory-picker-native`, `directory-picker-browse` | `apiproxy` | - | 带判别标记的交互能力：原生后端在 Host 显示设备上打开一个操作系统选择器，浏览后端为应用内浏览器提供列表与创建原语；双端后端通过其浏览器侧填充 ui-workspace 目录流程的 slot（不通过协议发布）。 |
 | `ctx.webServer` | `core` | `webserver` | - | `connection`, `modules`, `hmr` | - | 普通的 node:http 载体：具名路由注册表、索引转换 tap，以及静态 dist 回退；Web 传输插件注册自己的路由。 |
+| `ctx.webAuth` | `seam` | `web-auth` | `web-auth-password`, `web-auth-cloudflare-access` | `connection` | - | 提供方注册表，加上登录会话与 Cookie 的生命周期；载体把这项要求叠加到自己的浏览器权威围栏上，因此不挂载任何提供方时，仅回环地址的服务方式保持不变。 |
 | `ctx.clientModules` | `core` | `modules` | - | `hmr` | - | 通过增量 `dsh.client` 扫描组合 __DSH_BOOT__ 入口图，提供插件组合包，并通知重建／图变更订阅方。 |
 | `ctx.workflowEngine` | `seam` | [`workflow`](../packages/workflow/workflow) | [`workflow-worker-thread`](../packages/workflow/workflow-worker-thread) | [`tool-workflow`](../packages/workflow/tool-workflow), [`tool-ralph`](../packages/workflow/tool-ralph) | - | 每个上下文使用一个引擎，与 bash 相同，且没有具名提供方注册表；通用工作流与固定 Ralph 消费方启动运行，其中的 agent() 调用通过 ctx.subagents 扇出。 |
 | `ctx.lsp` | `seam` | [`lsp`](../packages/lsp/lsp) | `lsp-local` | [`tool-lsp`](../packages/lsp/tool-lsp) | - | 提供方注册与选择，加上恰好四种操作的标准化查询执行；该 seam 不提供协议逃生口，后端必须转换为标准化请求和结果。 |
