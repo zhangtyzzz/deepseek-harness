@@ -7,7 +7,9 @@
   },
   "files": [
     "src/api-path.ts",
+    "src/api-request-gate.ts",
     "src/api-request-trust.ts",
+    "src/auth-routes.ts",
     "src/http-bridge.ts",
     "src/index.ts",
     "src/invariant.ts",
@@ -22,6 +24,9 @@
     },
     {
       "path": "../../host/apiproxy"
+    },
+    {
+      "path": "../../host/web-auth"
     },
     {
       "path": "../../host/webserver"
