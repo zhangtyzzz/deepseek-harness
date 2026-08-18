@@ -13,6 +13,20 @@ The pluggable web-authentication capability lives on `master` but is not in any
 published `@deepseek-ai/dsh` release yet, so the image builds the workspace
 instead of installing the npm artifact.
 
+## Pulling instead of building
+
+`.github/workflows/docker-image.yml` publishes a multi-platform image — `linux/amd64`
+and `linux/arm64`, each built on its own native runner — to
+`ghcr.io/<repository owner>/dsh-web` on every push to `master`. For this fork that is
+`ghcr.io/zhangtyzzz/dsh-web`:
+
+```bash
+docker pull ghcr.io/zhangtyzzz/dsh-web:latest
+```
+
+A pull request builds both platforms without publishing, so a change that breaks
+the image is caught before the tag moves.
+
 ## Build and run
 
 ```bash

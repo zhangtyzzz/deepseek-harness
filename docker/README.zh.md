@@ -11,6 +11,18 @@
 可插拔 Web 认证能力在 `master` 上，但尚未进入任何已发布的 `@deepseek-ai/dsh` 版本，因此镜像构建整个
 工作区，而不是安装 npm 产物。
 
+## 直接拉取而不构建
+
+`.github/workflows/docker-image.yml` 会在每次推送到 `master` 时发布多平台镜像——`linux/amd64` 与
+`linux/arm64`，各自在原生 runner 上构建——推到 `ghcr.io/<仓库所有者>/dsh-web`。对这个 fork 来说就是
+`ghcr.io/zhangtyzzz/dsh-web`：
+
+```bash
+docker pull ghcr.io/zhangtyzzz/dsh-web:latest
+```
+
+Pull request 会构建两个平台但不发布，因此让镜像构建失败的改动会在标签移动之前被发现。
+
 ## 构建与运行
 
 ```bash
