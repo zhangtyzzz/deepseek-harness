@@ -56,10 +56,26 @@ verifier，位于 `/dsh-home/web-auth/password.json`。删除该文件会在下�
 | `DSH_BIND` | `0.0.0.0` | 容器内的绑定地址。通过 patch 层设置，因为 `dsh web --host 0.0.0.0` 被 CLI 有意拒绝。 |
 | `DSH_COOKIE_SECURE` | `auto` | `auto` 在请求报告了 HTTPS 转发跳时给会话 Cookie 标记 `Secure`；`always` 适用于全程 HTTPS 的部署；`never` 用于纯 HTTP 的局域网。 |
 | `DSH_SESSION_TTL_SECONDS` | `43200` | 登录会话的存活时长。 |
+| `DSH_WEB_AUTH_PASSWORD` | `1` | 是否挂载本地密码提供方。置 `0` 则只剩外部身份这一条进入路径。 |
 | `DSH_AUTH_MAX_ATTEMPTS` | `5` | 同一客户端连续失败多少次后锁定。 |
 | `DSH_AUTH_LOCKOUT_SECONDS` | `300` | 一次锁定拒绝该客户端多久。 |
+| `DSH_CF_ACCESS_TEAM` | *（空）* | Cloudflare Access 的团队域名，写成裸主机名，例如 `example.cloudflareaccess.com`。设置它即挂载 Access 提供方，必须与 audience 同时设置。 |
+| `DSH_CF_ACCESS_AUD` | *（空）* | Access 应用的 Audience（AUD）标签。只有 `aud` 含该值的 token 才被接受。 |
+| `DSH_CF_ACCESS_CERTS_URL` | *（团队域名默认路径）* | 签名密钥集端点，供部署在自定义 Access 主机名上的情形使用。 |
 | `DSH_PRINT_CONFIG` | `0` | 置 `1` 时在启动阶段把渲染出的 patch overlay 打到 stderr。 |
 | `DSH_HOME` | `/dsh-home` | Harness 状态：会话、设置、凭据、密码 verifier。 |
+
+## 用 Cloudflare Access 挡在前面
+
+设置 `DSH_CF_ACCESS_TEAM` 与 `DSH_CF_ACCESS_AUD` 即挂载 Access 提供方，于是携带有效 Access token 的
+请求无需密码提示即为已认证。token 在这里被校验——RS256 且 `alg` 钉死、`iss` 等于团队域名的 origin、
+`aud` 必须含配置的标签——因此绕过隧道直连 origin 的调用方无法仅凭断言那个头进来。
+
+除非你另有进入路径，否则请把密码提供方一并挂着：Access 的密钥集要经网络获取，那里出故障会让携带
+头部凭据的调用方降级为未认证。
+
+当 `DSH_TRUSTED_HOST` 指定了权威而一个提供方都没启用时，entrypoint 会拒绝启动——那种组合等于按认证
+出现之前的方式对外提供该权威。
 
 ## entrypoint 渲染出什么
 

@@ -62,10 +62,30 @@ the next start.
 | `DSH_BIND` | `0.0.0.0` | Bind address inside the container. Set through the patch layer, because `dsh web --host 0.0.0.0` is refused by the CLI on purpose. |
 | `DSH_COOKIE_SECURE` | `auto` | `auto` marks the session cookie `Secure` when the request reports an HTTPS forwarding hop; `always` for HTTPS-only deployments; `never` for plain-HTTP LAN. |
 | `DSH_SESSION_TTL_SECONDS` | `43200` | Sign-in session lifetime. |
+| `DSH_WEB_AUTH_PASSWORD` | `1` | Mount the local-password provider. `0` leaves an external identity as the only way in. |
 | `DSH_AUTH_MAX_ATTEMPTS` | `5` | Consecutive failures from one client before a lockout. |
 | `DSH_AUTH_LOCKOUT_SECONDS` | `300` | How long a triggered lockout refuses that client. |
+| `DSH_CF_ACCESS_TEAM` | *(empty)* | Cloudflare Access team domain as a bare hostname, e.g. `example.cloudflareaccess.com`. Mounts the Access provider; must be set together with the audience. |
+| `DSH_CF_ACCESS_AUD` | *(empty)* | The Access application's Audience (AUD) tag. A token is accepted only when its `aud` contains this value. |
+| `DSH_CF_ACCESS_CERTS_URL` | *(team domain path)* | Signing key-set endpoint, for a deployment on a custom Access hostname. |
 | `DSH_PRINT_CONFIG` | `0` | `1` echoes the rendered patch overlay to stderr at start. |
 | `DSH_HOME` | `/dsh-home` | Harness state: sessions, settings, credentials, password verifier. |
+
+## Fronting it with Cloudflare Access
+
+Setting `DSH_CF_ACCESS_TEAM` and `DSH_CF_ACCESS_AUD` mounts the Access provider, so
+a request carrying a valid Access token is authenticated without a password prompt.
+The token is verified here — RS256 with `alg` pinned, `iss` equal to the team origin,
+`aud` containing the configured tag — so a caller that reaches the origin directly,
+bypassing the tunnel, cannot simply assert the header.
+
+Keep the password provider mounted alongside unless you have another way in: the
+Access key set is fetched over the network, and an outage there degrades
+header-credential callers to unauthenticated.
+
+The entrypoint refuses to start when `DSH_TRUSTED_HOST` names an authority and no
+provider is enabled at all, because that composition serves the declared authority
+exactly as it did before authentication existed.
 
 ## What the entrypoint renders
 
