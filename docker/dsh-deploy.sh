@@ -319,7 +319,11 @@ cmd_deploy() {
   collect
   say "Pulling $IMAGE"
   info "the image carries the built workspace, so expect a multi-gigabyte download the first time"
-  docker pull "$IMAGE" > /dev/null || die "pull failed."
+  # Progress stays on screen: on a slow link this runs for many minutes, and a
+  # silent pull is indistinguishable from a stalled one. Docker does not resume a
+  # partial layer, so the answer to a slow pull is to let it finish, not to cut it
+  # off — which is only a decision the operator can make from the byte counter.
+  docker pull "$IMAGE" || die "pull failed."
   start_containers
   wait_ready
   show_password
