@@ -33,6 +33,16 @@ export interface WebRoute {
   handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
 }
 
+/**
+ * The one handler consulted before the fallback for a request no named route
+ * claimed. It answers or declines: `true` means it owns the response, `false`
+ * means the fallback serves the request as if no guard were registered.
+ */
+export type WebFallbackGuard = (
+  req: IncomingMessage,
+  res: ServerResponse,
+) => boolean | Promise<boolean>
+
 /** One exact-path HTTP upgrade registration. */
 export interface WebUpgradeRoute {
   /** Absolute pathname, no trailing slash. */
@@ -68,6 +78,7 @@ export class WebServer extends Service {
   private readonly upgradedSockets = new Set<Duplex>()
   private readonly indexTaps: ((html: string) => string)[] = []
   private fallback: WebRoute['handler'] | undefined
+  private fallbackGuard: WebFallbackGuard | undefined
   private server!: Server
   private listenedPort!: number
 
@@ -131,6 +142,27 @@ export class WebServer extends Service {
   }
 
   /**
+   * Claim the guard seat: the handler consulted before the fallback for every
+   * request no named route matched, so a composition can answer for the
+   * fallback's surface without owning it. Returning false leaves the request to
+   * the fallback untouched. One owner only, for the reason the fallback has one:
+   * two guards would each have to know what the other decided.
+   *
+   * The shipped Web composition uses it to send an unauthenticated browser to
+   * the sign-in page instead of the app shell, which the fallback would
+   * otherwise serve to anyone who reaches the port.
+   * @param guard - decides and, when it decides, answers.
+   * @returns the disposer releasing the seat.
+   */
+  registerFallbackGuard(guard: WebFallbackGuard): () => void {
+    if (this.fallbackGuard !== undefined) {
+      throw new Error('webserver: fallback guard already registered')
+    }
+    this.fallbackGuard = guard
+    return () => { this.fallbackGuard = undefined }
+  }
+
+  /**
    * Register an index.html transform, applied by the fallback owner to every
    * index response ({@link applyIndexTaps}) in registration order.
    * @param transform - pure html-to-html function.
@@ -161,6 +193,9 @@ export class WebServer extends Service {
         res.end()
         return
       }
+      // The guard runs only for the fallback's surface: a named route owns its
+      // own admission, and asking twice would double-answer.
+      if (this.fallbackGuard !== undefined && await this.fallbackGuard(req, res)) return
       await fallback(req, res)
     }
     // Last-resort guard: handle() rejecting would otherwise be an unhandled

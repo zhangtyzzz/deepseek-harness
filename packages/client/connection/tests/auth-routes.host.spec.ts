@@ -43,13 +43,21 @@ let root: string
 let harness: Harness | undefined
 
 /** Boot webserver + webAuth + password provider + the connection carrier. */
-async function launch(options: { withAuth?: boolean; interactive?: boolean } = {}): Promise<Harness> {
+async function launch(options: { withAuth?: boolean; interactive?: boolean; withShell?: boolean } = {}): Promise<Harness> {
   const printed: string[] = []
   const log = vi.spyOn(console, 'log').mockImplementation((line: unknown) => { printed.push(String(line)) })
   const ctx = new Context()
   try {
     await ctx.plugin(WebServer, { host: '127.0.0.1', port: 0 })
     ctx.provide('apiProxy', {} as ApiProxy)
+    // Stands in for the frontend's fallback seat, so a test can tell "the shell
+    // was served" from "the gate answered".
+    if (options.withShell === true) {
+      ctx.webServer.registerFallback((_req, res) => {
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        res.end('<!doctype html><title>shell</title>')
+      })
+    }
     if (options.withAuth !== false) {
       await ctx.plugin(WebAuth, { cookieSecure: 'never' })
       if (options.interactive === false) {
@@ -319,5 +327,47 @@ describe('a composition that mounts no authentication', () => {
     // No seam, no sign-in surface: the routes do not exist at all.
     expect((await harness.call({ path: LOGIN_PATH })).status).toBe(404)
     expect((await harness.call({ path: STATUS_PATH })).status).toBe(404)
+  })
+})
+
+describe('the app shell an anonymous browser reaches', () => {
+  it('redirects a declared-authority navigation to the sign-in page', async () => {
+    harness = await launch({ withShell: true })
+    const answer = await harness.call({ path: '/', host: DECLARED_AUTHORITY })
+    expect(answer.status).toBe(302)
+    expect(answer.headers.location).toBe(LOGIN_PATH)
+    expect(answer.headers['cache-control']).toBe('no-store')
+    // The shell itself never went out.
+    expect(answer.body).not.toContain('shell')
+  })
+
+  it('serves the shell over loopback without a credential', async () => {
+    harness = await launch({ withShell: true })
+    const answer = await harness.call({ path: '/' })
+    expect(answer.status).toBe(200)
+    expect(answer.body).toContain('shell')
+  })
+
+  it('serves the shell to a signed-in browser', async () => {
+    harness = await launch({ withShell: true })
+    const cookie = await signIn(harness)
+    const answer = await harness.call({ path: '/', host: DECLARED_AUTHORITY, cookie })
+    expect(answer.status).toBe(200)
+    expect(answer.body).toContain('shell')
+  })
+
+  it('leaves a method the fallback owns to the fallback', async () => {
+    harness = await launch({ withShell: true })
+    // The stand-in fallback answers every method; the point is that the gate did
+    // not turn a non-navigation into a redirect.
+    const answer = await harness.call({ path: '/', host: DECLARED_AUTHORITY, method: 'POST', body: '{}' })
+    expect(answer.status).toBe(200)
+  })
+
+  it('leaves the shell ungated when no provider is mounted', async () => {
+    harness = await launch({ withAuth: false, withShell: true })
+    const answer = await harness.call({ path: '/', host: DECLARED_AUTHORITY })
+    expect(answer.status).toBe(200)
+    expect(answer.body).toContain('shell')
   })
 })

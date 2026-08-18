@@ -147,6 +147,26 @@ describe('real Loader composition', () => {
     expect((await request(port, '/once')).body).toContain('shell') // back to the fallback owner
     expect(() => server.register({ kind: 'exact', path: '/once', handler: () => {} })).not.toThrow()
 
+    // Guard seat: consulted only for the fallback's surface, one owner at a
+    // time, and a declining guard leaves the request to the fallback untouched.
+    const releaseDeclining = server.registerFallbackGuard(() => false)
+    expect((await request(port, '/no/such/route')).body).toContain('shell')
+    expect(() => server.registerFallbackGuard(() => false)).toThrow(/fallback guard already registered/)
+    releaseDeclining()
+    const releaseGuard = server.registerFallbackGuard((_req, res) => {
+      res.writeHead(302, { location: '/elsewhere' })
+      res.end()
+      return true
+    })
+    // Manual redirect handling: this guard points at a path no route claims, so
+    // following the Location would come straight back to the guard. The shipped
+    // gate redirects to a named route, which the guard never sees.
+    expect((await request(port, '/no/such/route', { redirect: 'manual' })).status).toBe(302)
+    // A named route owns its own admission, so the guard never sees it.
+    expect(await request(port, '/probe')).toMatchObject({ status: 200, body: 'EXACT' })
+    releaseGuard()
+    expect((await request(port, '/no/such/route')).body).toContain('shell')
+
     // Releasing the seat restores the unclaimed 404 and registrability.
     releaseFallback()
     expect((await request(port, '/no/such/route')).status).toBe(404)
@@ -223,4 +243,5 @@ describe('real Loader composition', () => {
       root = firstRoot
     }
   })
+
 })

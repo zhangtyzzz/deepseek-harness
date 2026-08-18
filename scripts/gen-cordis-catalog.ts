@@ -462,6 +462,7 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   PresetOption: 'permission-presets.md',
   PresetSpec: 'permission-presets.md',
   InvariantInstaller: 'invariants.md',
+  WebFallbackGuard: 'web-server.md',
   WebRoute: 'web-server.md',
   SignInResult: 'web-auth.md',
   WebAuthClient: 'web-auth.md',

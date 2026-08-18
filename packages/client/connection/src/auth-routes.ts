@@ -184,4 +184,22 @@ export function registerAuthRoutes(ctx: Context, webAuth: WebAuth, trustedHosts:
   for (const route of routes) {
     ctx.effect(() => ctx.webServer.register(route), `client-connection: ${route.path} route`)
   }
+
+  // The app shell is static and the fallback would hand it to anyone who reaches
+  // the port. Every `/api` call it makes is still refused, so nothing leaks — but
+  // an anonymous browser renders the harness's empty state instead of being told
+  // to sign in, which reads as "no authentication" to the person looking at it.
+  // Send that navigation to the page that can fix it.
+  ctx.effect(() => ctx.webServer.registerFallbackGuard(async (req, res) => {
+    // Not a composition that authenticates anyone: leave the shell alone.
+    if (!webAuth.required) return false
+    // The fallback answers 405 for anything but GET/HEAD; that stays its call.
+    if (req.method !== 'GET' && req.method !== 'HEAD') return false
+    // Loopback reaches everything without a credential, the shell included.
+    if (isTrustedApiRequest(req, [])) return false
+    if (await webAuth.authenticate(req) !== undefined) return false
+    res.writeHead(302, { ...NO_STORE, location: LOGIN_PATH })
+    res.end()
+    return true
+  }), 'client-connection: unauthenticated shell gate')
 }

@@ -2122,6 +2122,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the disposer releasing the seat.',
       },
       {
+        signature: 'registerFallbackGuard(guard: WebFallbackGuard): () => void',
+        description: 'Claim the guard seat: the handler consulted before the fallback for every request no named route matched, so a composition can answer for the fallback\'s surface without owning it. Returning false leaves the request to the fallback untouched. One owner only, for the reason the fallback has one: two guards would each have to know what the other decided.\n\nThe shipped Web composition uses it to send an unauthenticated browser to the sign-in page instead of the app shell, which the fallback would otherwise serve to anyone who reaches the port.',
+        parameters: [{ name: 'guard', description: 'decides and, when it decides, answers.' }],
+        returns: 'the disposer releasing the seat.',
+      },
+      {
         signature: 'tapIndex(transform: (html: string) => string): () => void',
         description: 'Register an index.html transform, applied by the fallback owner to every index response (applyIndexTaps) in registration order.',
         parameters: [{ name: 'transform', description: 'pure html-to-html function.' }],
@@ -4616,6 +4622,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WebBootGraph',
     declaration: 'export interface WebBootGraph {\n    rev: string;\n    entries: WebBootEntry[];\n}',
+  },
+  {
+    name: 'WebFallbackGuard',
+    declaration: 'export type WebFallbackGuard = (req: IncomingMessage, res: ServerResponse) => boolean | Promise<boolean>;',
   },
   {
     name: 'WebFetchBody',

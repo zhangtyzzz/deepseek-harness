@@ -88,6 +88,21 @@ registerUpgrade(route: WebUpgradeRoute): () => void
 registerFallback(handler: WebRoute['handler']): () => void
 
 /**
+ * Claim the guard seat: the handler consulted before the fallback for every
+ * request no named route matched, so a composition can answer for the
+ * fallback's surface without owning it. Returning false leaves the request to
+ * the fallback untouched. One owner only, for the reason the fallback has one:
+ * two guards would each have to know what the other decided.
+ *
+ * The shipped Web composition uses it to send an unauthenticated browser to
+ * the sign-in page instead of the app shell, which the fallback would
+ * otherwise serve to anyone who reaches the port.
+ * @param guard - decides and, when it decides, answers.
+ * @returns the disposer releasing the seat.
+ */
+registerFallbackGuard(guard: WebFallbackGuard): () => void
+
+/**
  * Register an index.html transform, applied by the fallback owner to every
  * index response ({@link applyIndexTaps}) in registration order.
  * @param transform - pure html-to-html function.
@@ -104,5 +119,5 @@ tapIndex(transform: (html: string) => string): () => void
 applyIndexTaps(html: string): string
 ```
 
-Source: [`packages/host/webserver/src/index.ts:59`](../../packages/host/webserver/src/index.ts)
+Source: [`packages/host/webserver/src/index.ts:69`](../../packages/host/webserver/src/index.ts)
 <!-- END GENERATED cordis-surface -->
