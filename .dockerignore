@@ -1,0 +1,23 @@
+# Build context: only sources. Every build output is regenerated in the builder
+# stage, and shipping a host-built `node_modules` would carry the host's platform
+# binaries into a linux image.
+.git
+.gitignore
+**/node_modules
+**/lib
+apps/web/dist
+**/coverage
+**/.sessions
+**/tmp
+.artifacts
+.humanize
+.playwright-mcp
+.worktrees
+worktrees
+.agents/worktrees
+.typert-*
+dist-exe
+python/**/__pycache__
+python/**/.pytest_cache
+**/.DS_Store
+**/*.orig

@@ -1,0 +1,28 @@
+# Reachable-from-anywhere dsh, with the harness owning its own authentication.
+#
+# `DSH_TRUSTED_HOST` must name every authority a browser reaches this deployment
+# by; the /api trust fence refuses anything else, credential or not. Leaving it
+# empty keeps the container loopback-only.
+services:
+  dsh:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: dsh-web:local
+    init: false
+    ports:
+      - '${DSH_PUBLISH:-127.0.0.1:3080}:3080'
+    environment:
+      DSH_TRUSTED_HOST: ${DSH_TRUSTED_HOST:-}
+      DSH_COOKIE_SECURE: ${DSH_COOKIE_SECURE:-auto}
+      DSH_AUTH_MAX_ATTEMPTS: ${DSH_AUTH_MAX_ATTEMPTS:-5}
+      DSH_AUTH_LOCKOUT_SECONDS: ${DSH_AUTH_LOCKOUT_SECONDS:-300}
+    volumes:
+      # Sessions, settings, credentials and the password verifier live here.
+      - dsh-home:/dsh-home
+      # The directory the agent works in; bind-mount a real project to use it.
+      - ${DSH_WORKSPACE:-./workspace}:/workspace
+    restart: unless-stopped
+
+volumes:
+  dsh-home: {}
