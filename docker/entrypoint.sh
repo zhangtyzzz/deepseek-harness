@@ -21,6 +21,14 @@ if [ ! -w "${DSH_HOME}" ]; then
   exit 1
 fi
 
+# A leftover root-owned overlay makes the directory look writable while the
+# redirect below fails; say so once instead of failing on every restart.
+if [ -e "${CONFIG}" ] && [ ! -w "${CONFIG}" ]; then
+  echo "dsh-entrypoint: ${CONFIG} exists but is not writable by uid $(id -u)." >&2
+  echo "  It was written by a container that ran as root. Delete it, or recreate the volume." >&2
+  exit 1
+fi
+
 if { [ -n "${CF_TEAM}" ] && [ -z "${CF_AUD}" ]; } || { [ -z "${CF_TEAM}" ] && [ -n "${CF_AUD}" ]; }; then
   echo "dsh-entrypoint: set both DSH_CF_ACCESS_TEAM and DSH_CF_ACCESS_AUD, or neither" >&2
   exit 1
