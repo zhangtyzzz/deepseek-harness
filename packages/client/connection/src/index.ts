@@ -5,9 +5,13 @@ import type {} from '@deepseek-ai/dsh-attachment'
 // Activates the webServer Context merge used below.
 import type { WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
 import { toFetchHandler } from '@deepseek-ai/dsh-host-apiproxy'
+// Activates the webAuth Context merge; the seam is optional and read per request.
+import type {} from '@deepseek-ai/dsh-host-web-auth'
 import { API_PATH, HOST_EVENTS_PATH, MUX_EVENTS_PATH } from './api-path.ts'
 import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
-import { assertTrustedAuthority, isTrustedApiRequest } from './api-request-trust.ts'
+import { assertTrustedAuthority } from './api-request-trust.ts'
+import { admitsRequest, type WebAuthGate } from './api-request-gate.ts'
+import { registerAuthRoutes } from './auth-routes.ts'
 import { HostConnectionService } from './rpc-host.ts'
 import { rejectWebSocketUpgrade, WebSocketDownlinks } from './websocket-downlink.ts'
 
@@ -67,20 +71,23 @@ export const Config: z<ConnectionConfig> = z.object({
 })
 
 /**
- * Methods gated to loopback even on a trusted-host deployment. Native dialogs
- * act on the host machine; the settings and credential domains mutate the
- * user's configuration and secret store, and READING them is equally
+ * Methods gated to loopback until a verified principal is present. Native
+ * dialogs act on the host machine; the settings and credential domains mutate
+ * the user's configuration and secret store, and READING them is equally
  * privileged — `settings.describe` returns every exposed namespace's
  * configuration and `credentials.describe` reports whether an arbitrary
  * environment-variable name is configured and where from, which is
  * reconnaissance no anonymous caller should have. `trustedHosts` is a
  * DNS-rebinding fence, explicitly not authentication, so the whole
- * configuration plane stays loopback-same-origin until a real authentication
- * layer exists. `llm.discoverModels` belongs to that plane on both counts: it
- * carries a draft credential, and it makes the HOST issue a GET to a URL the
- * caller chose and reports back the status or the parsed body — an anonymous
- * LAN caller would have a probe for whatever the host can reach and the
- * browser cannot.
+ * configuration plane stays loopback-same-origin for anonymous callers.
+ * `llm.discoverModels` belongs to that plane on both counts: it carries a draft
+ * credential, and it makes the HOST issue a GET to a URL the caller chose and
+ * reports back the status or the parsed body — an anonymous LAN caller would
+ * have a probe for whatever the host can reach and the browser cannot.
+ *
+ * A composition mounting an authentication provider ([web-auth](../../../host/web-auth/README.md))
+ * opens this set to requests carrying a verified principal: the pin exists
+ * because anonymity, not remoteness, is what makes these methods dangerous.
  *
  * The model catalog (`llm.providers`, `llm.models`) is deliberately NOT here:
  * it carries provider ids, display names, and model lists — no endpoints,
@@ -121,9 +128,11 @@ const PRIVILEGED_METHODS = new Set([
 /**
  * Mounts the API gateway under the browser transport prefix. Every request on
  * the prefix passes the browser-trust fence first (DNS-rebinding and
- * cross-site defense — [api-request-trust](./api-request-trust.ts));
- * privileged methods additionally pass it with an empty trust list, which
- * pins them to loopback.
+ * cross-site defense — [api-request-trust](./api-request-trust.ts)), then the
+ * authentication requirement a mounted `webAuth` seam adds
+ * ([api-request-gate](./api-request-gate.ts)); privileged methods additionally
+ * pass it under the `loopback` authority, which pins them to the host machine
+ * for anonymous callers and opens them to a verified principal.
  * @param ctx - Host plugin context.
  * @param config - resolved plugin config (schema defaults applied).
  */
@@ -135,7 +144,11 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
   // silently authorizing its hostname prefix at request time.
   for (const entry of trustedHosts) assertTrustedAuthority(entry)
   if (ctx.get('apiProxy') !== undefined) assertImageBodyCapacity(ctx, maxRequestBodyBytes)
-  const connection = new HostConnectionService(ctx, trustedHosts)
+  // Read per request rather than captured: the seam is an optional sibling row
+  // whose load order relative to this one is not fixed, and it may be
+  // re-mounted under HMR.
+  const resolveAuth = (): WebAuthGate | undefined => ctx.get('webAuth')
+  const connection = new HostConnectionService(ctx, trustedHosts, resolveAuth)
   const fetchHandler = connection.createSharedFetchHandler(API_PATH, {
     async fetch(request) {
       const pathname = new URL(request.url).pathname
@@ -144,7 +157,7 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
         : undefined
       if (method !== undefined
         && PRIVILEGED_METHODS.has(method)
-        && !isTrustedApiRequest(request, [])) {
+        && !await admitsRequest(request, 'loopback', trustedHosts, resolveAuth())) {
         return new Response('forbidden', { status: 403 })
       }
       if (request.method === 'GET' && (pathname === MUX_EVENTS_PATH || pathname === HOST_EVENTS_PATH)) {
@@ -162,7 +175,7 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
     kind: 'prefix',
     path: API_PATH,
     handler: async (req, res) => {
-      if (!isTrustedApiRequest(req, trustedHosts)) {
+      if (!await admitsRequest(req, 'trusted-host', trustedHosts, resolveAuth())) {
         res.writeHead(403)
         res.end('forbidden')
         return
@@ -171,6 +184,9 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
     },
   }
   ctx.effect(() => ctx.webServer.register(route), 'client-connection: /api route')
+  // The sign-in surface exists only where a seam does; without one the harness
+  // has no authentication and no page to offer.
+  ctx.inject(['webAuth'], (authCtx) => { registerAuthRoutes(authCtx, authCtx.webAuth, trustedHosts) })
   ctx.inject(['apiProxy'], (apiCtx) => {
     assertImageBodyCapacity(apiCtx, maxRequestBodyBytes)
     const downlinks = new WebSocketDownlinks(apiCtx.apiProxy)
@@ -180,12 +196,12 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
     ): void => {
       apiCtx.effect(() => apiCtx.webServer.registerUpgrade({
         path,
-        handler: (req, socket, head) => {
-          if (!isTrustedApiRequest(req, trustedHosts)) {
+        handler: async (req, socket, head) => {
+          if (!await admitsRequest(req, 'trusted-host', trustedHosts, resolveAuth())) {
             rejectWebSocketUpgrade(socket)
             return
           }
-          return handle(req, socket, head)
+          await handle(req, socket, head)
         },
       }), `client-connection: ${path} WebSocket`)
     }

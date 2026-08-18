@@ -120,7 +120,11 @@ export function renderPairMeta(source: string, sourceHash: string, zh: string, z
 
 /** Validated fields of `scripts/translation-pairing.manifest.json`. */
 export interface TranslationPairingManifest {
-  /** Source documents exempt from pairing because they are generated, instructional, or bilingual by construction. */
+  /**
+   * Source documents exempt from pairing because they are generated,
+   * instructional, bilingual by construction, or single-use submission
+   * artifacts.
+   */
   excluded: string[]
 }
 

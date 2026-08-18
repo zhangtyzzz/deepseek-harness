@@ -2055,6 +2055,44 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'webAuth',
+    summary: 'The authentication service.',
+    description: 'The authentication service. Providers register into it; the browser-transport Consumer reads it to decide whether a request may pass the `/api` fence.\n\nVerification order is deliberate and not registration-dependent: an existing sign-in session is honored first (one map lookup, no provider work), then each provider\'s per-request credential check runs until one verifies. Only request-credential providers participate there, so adding an interactive provider never adds per-request cost.',
+    methods: [
+      {
+        signature: 'register(provider: WebAuthProvider): () => void',
+        description: 'Register one authentication provider. Disposed with the calling fiber.',
+        parameters: [{ name: 'provider', description: 'the mechanism; its `id` is the registry key.' }],
+        returns: 'the disposer that unregisters it.',
+        throws: ['when the id is already registered, or when the provider supplies neither verification surface — such a provider could never authenticate anything while still making authentication REQUIRED, locking the deployment out of its own harness.'],
+      },
+      {
+        signature: 'async authenticate(request: WebAuthRequest): Promise<WebAuthIdentity | undefined>',
+        description: 'Resolve the verified principal behind one request.',
+        parameters: [{ name: 'request', description: 'the request\'s headers.' }],
+        returns: 'the principal, or undefined when the request carries none.',
+      },
+      {
+        signature: 'async status(request: WebAuthRequest): Promise<WebAuthStatus>',
+        description: 'Report the authentication state for one request.',
+        parameters: [{ name: 'request', description: 'the request\'s headers.' }],
+        returns: 'what the caller may know before signing in.',
+      },
+      {
+        signature: 'async signIn(secret: string, client: WebAuthClient, request: WebAuthRequest): Promise<SignInResult>',
+        description: 'Verify a submitted secret and, on success, mint a browser session.\n\nA provider reporting a lockout ends the attempt immediately rather than letting the secret fall through to the next provider, so a second mounted provider can never be used to side-step the first one\'s rate limit.',
+        parameters: [{ name: 'secret', description: 'the submitted secret, verbatim.' }, { name: 'client', description: 'where the attempt came from, for provider rate limiting.' }, { name: 'request', description: 'the request\'s headers, read for the cookie\'s `Secure` decision.' }],
+        returns: 'the minted session, or why no session was minted.',
+      },
+      {
+        signature: 'signOut(request: WebAuthRequest): { setCookie: string }',
+        description: 'Revoke the sign-in session a request presents.',
+        parameters: [{ name: 'request', description: 'the request\'s headers.' }],
+        returns: 'the `Set-Cookie` value clearing the browser\'s cookie. Emitted even when no live session matched, so a stale cookie is always cleared.',
+      },
+    ],
+  },
+  {
     key: 'webServer',
     summary: 'The browser HTTP carrier service.',
     description: 'The browser HTTP carrier service. Activation listens immediately. Route registration order does not affect requests because configured named routes must be distinct, and the fallback handler answers anything not yet claimed during startup with 404 until its owner registers. A listen failure rejects initialization, and the boot process reports the failed fiber.',
@@ -4010,6 +4048,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ShellSandboxInfo {\n    mode: SandboxMode;\n    denied: boolean;\n    enforcement?: SandboxEnforcement;\n    runnerFailed?: boolean;\n}',
   },
   {
+    name: 'SignInFailure',
+    declaration: 'export type SignInFailure = {\n    readonly outcome: \'unsupported\';\n} | {\n    readonly outcome: \'rejected\';\n} | {\n    readonly outcome: \'locked\';\n    readonly retryAfterSeconds: number;\n};',
+  },
+  {
+    name: 'SignInResult',
+    declaration: 'export type SignInResult = {\n    readonly outcome: \'verified\';\n    readonly identity: WebAuthIdentity;\n    readonly setCookie: string;\n} | SignInFailure;',
+  },
+  {
     name: 'SkillCandidate',
     declaration: 'export interface SkillCandidate extends SkillSummary {\n    readonly rank: number;\n    readonly locator: unknown;\n    readonly path?: string;\n    readonly metadata?: Readonly<Record<string, unknown>>;\n}',
   },
@@ -4528,6 +4574,30 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UserQuestionProvider',
     declaration: 'export interface UserQuestionProvider {\n    ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;\n}',
+  },
+  {
+    name: 'WebAuthClient',
+    declaration: 'export interface WebAuthClient {\n    readonly address?: string;\n}',
+  },
+  {
+    name: 'WebAuthIdentity',
+    declaration: 'export interface WebAuthIdentity {\n    readonly provider: string;\n    readonly subject: string;\n}',
+  },
+  {
+    name: 'WebAuthProvider',
+    declaration: 'export interface WebAuthProvider {\n    readonly id: string;\n    verifyRequest?(request: WebAuthRequest): Promise<WebAuthIdentity | undefined>;\n    verifySecret?(secret: string, client: WebAuthClient): Promise<WebAuthSignInOutcome>;\n}',
+  },
+  {
+    name: 'WebAuthRequest',
+    declaration: 'export interface WebAuthRequest {\n    readonly headers: IncomingHttpHeaders | Headers;\n}',
+  },
+  {
+    name: 'WebAuthSignInOutcome',
+    declaration: 'export type WebAuthSignInOutcome = {\n    readonly outcome: \'verified\';\n    readonly identity: WebAuthIdentity;\n} | {\n    readonly outcome: \'rejected\';\n} | {\n    readonly outcome: \'locked\';\n    readonly retryAfterSeconds: number;\n};',
+  },
+  {
+    name: 'WebAuthStatus',
+    declaration: 'export interface WebAuthStatus {\n    readonly required: boolean;\n    readonly authenticated: boolean;\n    readonly interactive: boolean;\n}',
   },
   {
     name: 'WebBootEntry',

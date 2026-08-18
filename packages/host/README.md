@@ -9,12 +9,15 @@ The host side of the dsh web GUI: the API gateway every client shape shares, and
 | [`apiproxy/`](apiproxy/README.md) | Shared host API gateway and wire contract | `ctx.apiProxy` |
 | [`webserver/`](webserver/README.md) | HTTP route carrier | `ctx.webServer` |
 | [`frontend-static/`](frontend-static/README.md) | SPA dist server on the webserver fallback seat | consumes `ctx.webServer` |
+| [`web-auth/`](web-auth/README.md) | Web-access authentication seam | `ctx.webAuth` |
+| [`web-auth-password/`](web-auth-password/README.md) | Local-password provider with per-client lockout | registers `ctx.webAuth` |
+| [`web-auth-cloudflare-access/`](web-auth-cloudflare-access/README.md) | Cloudflare Access application-token provider | registers `ctx.webAuth` |
 | [`directory-picker/`](directory-picker/README.md) | Workspace-directory picking seam | `ctx.directoryPicker` |
 | [`directory-picker-native/`](directory-picker-native/README.md) | Native directory-picker backend and browser interaction | registers `ctx.directoryPicker` |
 | [`directory-picker-browse/`](directory-picker-browse/README.md) | In-app directory-browser backend and interaction | registers `ctx.directoryPicker` |
 | [`directory-picker-auto/`](directory-picker-auto/README.md) | Host-adaptive picker composition | mounts a backend |
 | [`plugin-inventory/`](plugin-inventory/README.md) | Read-only projection of current Loader entries | Remote `pluginInventory/list` |
 
-`apiproxy` remains transport-independent; [`client/connection`](../client/connection/README.md) supplies the browser/HTTP carrier. Picker implementations replace one another behind the shared seam.
+`apiproxy` remains transport-independent; [`client/connection`](../client/connection/README.md) supplies the browser/HTTP carrier. Picker implementations replace one another behind the shared seam, as do authentication providers behind `web-auth`; that seam is optional, and a composition mounting no provider serves exactly as it did before it existed.
 
-The subsystem references: [web-server.md](../../docs/subsystems/web-server.md) and [workspace.md](../../docs/subsystems/workspace.md) (the picker seam).
+The subsystem references: [web-server.md](../../docs/subsystems/web-server.md), [web-auth.md](../../docs/subsystems/web-auth.md), and [workspace.md](../../docs/subsystems/workspace.md) (the picker seam).

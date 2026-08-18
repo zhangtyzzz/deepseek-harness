@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-17-pluggable-web-authentication.md
+2026-08-17-pluggable-web-authentication.md: addf0f2937b32e2aeb5c4878220ad8898e6b2c60
+2026-08-17-pluggable-web-authentication.zh.md: eaa4afcc3b942e4bf38c67921eb7e4c323bd4bf7
