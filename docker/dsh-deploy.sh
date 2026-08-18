@@ -174,6 +174,20 @@ load_conf() {
   . "$CONF_FILE"
 }
 
+# ── image identity ───────────────────────────────────────────────────────────
+# `docker run` resolves a tag against the local store, so a pull that never
+# landed leaves the previous image running and nothing says so. Every claim about
+# "updated" below is therefore made against a digest, not against a pull's word.
+tag_digest() {                            # tag_digest <image|image-id>
+  docker inspect --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "$1" 2> /dev/null || true
+}
+
+container_image_digest() {                # digest of the image a container runs
+  local id
+  id=$(docker inspect --format '{{.Image}}' "$1" 2> /dev/null) || return 0
+  tag_digest "$id"
+}
+
 # ── bring it up ──────────────────────────────────────────────────────────────
 start_containers() {
   docker network inspect "$NETWORK" > /dev/null 2>&1 || docker network create "$NETWORK" > /dev/null
@@ -333,10 +347,23 @@ cmd_logs() {
 
 cmd_update() {
   require_docker; load_conf
+  local before after running
+  before=$(tag_digest "$IMAGE")
   say "Pulling a newer image"
-  docker pull "$IMAGE"
+  docker pull "$IMAGE" || die "pull failed — the deployment still runs its previous image."
+  after=$(tag_digest "$IMAGE")
+  [ -n "$after" ] || die "$IMAGE has no digest after the pull; refusing to claim an update."
+  if [ "$before" = "$after" ]; then
+    info "already the newest published image: $after"
+  else
+    info "image ${before:-<none>} → $after"
+  fi
   start_containers
   wait_ready
+  running=$(container_image_digest "$NAME")
+  [ "$running" = "$after" ] \
+    || die "'$NAME' runs ${running:-an unidentified image} but $after was pulled — update did not take."
+  info "verified: '$NAME' runs $running"
   info "state kept; every browser session was invalidated by the restart, which is by design"
   self_check
 }
