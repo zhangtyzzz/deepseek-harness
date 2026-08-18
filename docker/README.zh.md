@@ -25,6 +25,17 @@ Pull request 会构建两个平台但不发布，因此让镜像构建失败的�
 
 ## 构建与运行
 
+`docker/dsh-deploy.sh` 是最短路径:它会询问所需信息、把容器拉起来、打印一次性密码,并自检信任栅栏。
+
+```bash
+./docker/dsh-deploy.sh deploy
+./docker/dsh-deploy.sh status | logs | update | stop | rotate-password
+```
+
+每一个提问都可以用环境变量预先回答(`DSH_MODE`、`DSH_HOSTNAME`、`DSH_TUNNEL_TOKEN`、`DSH_CF_TEAM`、
+`DSH_CF_AUD`、`DSH_PORT`、`DSH_WORKSPACE`),因此第二次部署可以脚本化。本页余下部分就是这个脚本
+手工做的那些事。
+
 ```bash
 # from the repository root
 docker build -f docker/Dockerfile -t dsh-web:local .

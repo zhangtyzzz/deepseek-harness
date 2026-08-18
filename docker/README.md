@@ -29,6 +29,19 @@ the image is caught before the tag moves.
 
 ## Build and run
 
+`docker/dsh-deploy.sh` is the shortest path: it asks for what it needs, brings the
+containers up, prints the one-time password, and self-checks the fence.
+
+```bash
+./docker/dsh-deploy.sh deploy
+./docker/dsh-deploy.sh status | logs | update | stop | rotate-password
+```
+
+Every prompt can be pre-answered with an environment variable (`DSH_MODE`,
+`DSH_HOSTNAME`, `DSH_TUNNEL_TOKEN`, `DSH_CF_TEAM`, `DSH_CF_AUD`, `DSH_PORT`,
+`DSH_WORKSPACE`), so a second deployment is scriptable. The rest of this page is
+what the script does by hand.
+
 ```bash
 # from the repository root
 docker build -f docker/Dockerfile -t dsh-web:local .
