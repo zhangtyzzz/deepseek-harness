@@ -9,6 +9,16 @@ name: docker image
 on:
   push:
     branches: [master]
+    # A double-platform rebuild and a GHCR re-push cost about seven minutes, which
+    # a documentation-only push cannot justify. Stated as an ignore list rather
+    # than an allow list on purpose: a build input added later keeps triggering a
+    # rebuild, where an allow list would silently leave `latest` behind master.
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.i18n.yaml'
+      - docs/**
+      - .agents/**
+      - LICENSE
   pull_request:
     paths:
       - docker/**
