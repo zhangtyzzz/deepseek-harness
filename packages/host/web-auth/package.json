@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-host-web-auth",
   "description": "Web-access authentication seam (ctx.webAuth) for the DeepSeek Harness — provider registry, sign-in session lifecycle, and the shared session-cookie encoding",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.0-rc.7",
   "publishConfig": {
     "access": "public"
   },

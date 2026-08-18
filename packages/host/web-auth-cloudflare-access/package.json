@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-host-web-auth-cloudflare-access",
   "description": "Cloudflare Access authentication provider for the DeepSeek Harness web seam — RS256 application-token verification against the team's rotating key set",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.0-rc.7",
   "publishConfig": {
     "access": "public"
   },
