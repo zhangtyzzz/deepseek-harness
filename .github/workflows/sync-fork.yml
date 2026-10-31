@@ -1,0 +1,32 @@
+name: Sync fork from upstream
+
+on:
+  schedule:
+    # 01:00 UTC = 09:00 Beijing time, daily.
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-fork
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Merge upstream default branch into fork default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Uses the merge-upstream API (same as the "Sync fork" button):
+          # fast-forwards when possible, otherwise creates a merge commit.
+          # Fails with 409 on conflict and leaves the branch unchanged;
+          # it never discards fork commits or force-pushes.
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/merge-upstream" \
+            -f branch="${GITHUB_REF_NAME}" \
+            --jq '"upstream sync: " + .message + " (merge type: " + (.merge_type // "n/a") + ")"'

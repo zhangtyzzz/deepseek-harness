@@ -1,0 +1,44 @@
+name: Build unsigned macOS Desktop DMG
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Sync fork from upstream']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-unsigned-dmg
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pinned pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Package unsigned macOS DMG (arm64)
+        run: pnpm run package:desktop:mac:arm64:unsigned
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-macos-arm64-unsigned
+          path: apps/desktop/.desktop-build/targets/*/unsigned-artifacts/*.dmg
+          if-no-files-found: error
