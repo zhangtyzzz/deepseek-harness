@@ -1,10 +1,10 @@
 name: Build unsigned macOS Desktop DMG
 
 on:
+  # Manual-only: run when you want a DMG (e.g. after landing a feature or
+  # pulling in interesting upstream changes). Re-enable automatic triggers if
+  # upstream starts cutting releases.
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Sync fork from upstream']
-    types: [completed]
 
 permissions:
   contents: read
@@ -15,9 +15,6 @@ concurrency:
 
 jobs:
   package:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: macos-latest
     timeout-minutes: 120
     steps:
