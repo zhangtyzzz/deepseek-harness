@@ -36,7 +36,7 @@
 - insert:
     - id: desktop-product-telemetry
       name: '@deepseek-ai/dsh-host-product-telemetry-otel'
-      disabled: !!js "ctx.get('profileContext')?.name !== 'desktop'"
+      disabled: true
       config:
         scheduledDelayMillis: 30000
         timeoutMillis: 15000
@@ -48,7 +48,7 @@
 
     - id: product-analytics
       name: '@deepseek-ai/dsh-client-product-analytics'
-      disabled: !!js "ctx.get('profileContext')?.name !== 'desktop'"
+      disabled: true
       config:
         enabled: true
         appVersion: !!js process.env.DSH_CLIENT_VERSION
