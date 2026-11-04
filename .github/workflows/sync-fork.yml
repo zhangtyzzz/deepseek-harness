@@ -7,11 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  # workflows: write is required when the upstream sync diff touches any
-  # .github/workflows file; the merge-upstream API rejects workflow-file
-  # updates from tokens without it (HTTP 422).
   contents: write
-  workflows: write
 
 concurrency:
   group: sync-fork
