@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Unsigned builds skip the upstream signed-helper staging step, so build
+      # the ad-hoc CUA helper here; electron-builder unpacks native/bin/** and
+      # the installed package resolves it next to app.asar.
+      - name: Build CUA helper (ad-hoc)
+        run: pnpm --dir packages/experimental/cua-macos run build:native
+
       - name: Package unsigned macOS DMG (arm64)
         run: pnpm run package:desktop:mac:arm64:unsigned
 
