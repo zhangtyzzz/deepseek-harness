@@ -2,9 +2,8 @@ name: Sync fork from upstream
 
 on:
   schedule:
-    # 01:07 UTC = 09:07 Beijing time, daily. Off the hour because top-of-hour
-    # schedules are the most likely to be delayed or dropped.
-    - cron: '7 1 * * *'
+    # 01:23 Asia/Singapore (UTC+08:00), daily. GitHub may start it hours late.
+    - cron: '23 17 * * *'
   workflow_dispatch:
 
 permissions:
