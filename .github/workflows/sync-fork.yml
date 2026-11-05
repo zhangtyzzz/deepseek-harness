@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: sync-fork
@@ -19,17 +19,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # github.token cannot update .github/workflows/ (HTTP 422 from the
+      # merge-upstream API), so push with a write-enabled deploy key instead.
+      - uses: actions/checkout@v7
+        with:
+          ssh-key: ${{ secrets.SYNC_DEPLOY_KEY }}
+          fetch-depth: 0
+          filter: blob:none
+
       - name: Merge upstream default branch into fork default branch
         env:
-          # github.token cannot update .github/workflows/ (HTTP 422), so upstream
-          # changes to those files need a SYNC_TOKEN with workflow write access.
-          GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Uses the merge-upstream API (same as the "Sync fork" button):
-          # fast-forwards when possible, otherwise creates a merge commit.
-          # Fails with 409 on conflict and leaves the branch unchanged;
-          # it never discards fork commits or force-pushes.
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/merge-upstream" \
-            -f branch="${GITHUB_REF_NAME}" \
-            --jq '"upstream sync: " + .message + " (merge type: " + (.merge_type // "n/a") + ")"'
+          read -r upstream_url upstream_branch < <(
+            gh api "repos/${GITHUB_REPOSITORY}" --jq '.parent | .clone_url + " " + .default_branch'
+          )
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch "${upstream_url}" "${upstream_branch}"
+          # Fails on conflict and leaves the branch unchanged; it never
+          # discards fork commits or force-pushes.
+          git merge --no-edit FETCH_HEAD
+          git push origin "HEAD:${GITHUB_REF_NAME}"
